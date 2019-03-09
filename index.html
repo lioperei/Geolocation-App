@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CPS 630 Lab 2</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  <script type="text/javascript" src="main.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAwVWAOvk648zh30_olgAg5cZJuWEBCnL4"async defer></script>
+</head>
+<body ondragenter="dragEnterHandler(event)" ondragleave="dragLeaveHandler(event)" >
+  <section class="input">
+    <div class="latlng">
+      <input id="lat" type="text" placeholder="Latitude">
+      <input id="lng" type="text" placeholder="Longitude">
+    </div>
+    <button id="locateMe" onclick="getCurrentLocation()">Locate Me!</button>
+    <button id="go">GO!</button>
+  </section>
+  <h3 id="uploadError"></h3>
+  <div class="distance">
+    <h4 id="current"></h4>
+    <h4 id="distance"></h4>
+  </div>
+  <div
+    id="dropzone"class="dropzone"
+    ondrop="dropHandler(event)"
+    ondragover="dragOverHandler(event)"
+    >
+    <div
+      id="map"
+      ondragenter="dragEnterDropzone(event)"
+      ondragleave="dragLeaveDropzone(event)"
+    ></div>
+    <div id="overlay" >
+      <h2>Drop Here</h2>
+    </div>
+  </div>
+  <section id="details">
+    <div id="currentPosition"></div>
+    <div id="dropPositions">
+      <h3 id="dropHeader"></h3>
+      <div id="drop"></div>
+    </div>
+  </section>
+</body>
+</html>
