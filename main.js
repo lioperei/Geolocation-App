@@ -1,5 +1,5 @@
 var currentPosition = {};
-var dropPositions = [];
+var dropPositions = 0;
 var cur;
 var map;
 var overlay;
@@ -11,22 +11,24 @@ window.onload = function () {
   initialize();
 }
 
+
 function initialize() {
   cur = document.getElementById('current');
   overlay = document.getElementById('overlay');
   error = document.getElementById('uploadError');
   document.getElementById('go').addEventListener('click', goClick);
   details = document.getElementById('details');
-  getCurrentLocation();
   distance = new Worker('distance.js');
   distance.addEventListener('message', function(e) {
     showDistance(e.data);
   }, false);
+  getCurrentLocation();
 }
 
 function getCurrentLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition((position) => {
+      resetDistance();
       currentPosition.lat = position.coords.latitude;
       currentPosition.lng = position.coords.longitude;
       error.textContent = '';
@@ -40,6 +42,16 @@ function getCurrentLocation() {
   }
 }
 
+function resetDistance(){
+  distance.postMessage({'reset': true});
+  dropPositions = 0;
+  document.getElementById('drop').innerHTML = "";
+  let header = document.getElementById('dropHeader');
+  if(header){
+    header.parentNode.removeChild(header)
+  }
+}
+
 function goClick() {
   let latVal = parseFloat(document.getElementById('lat').value);
   let lngVal = parseFloat(document.getElementById('lng').value);
@@ -49,6 +61,7 @@ function goClick() {
     } else {
       currentPosition.lat = latVal;
       currentPosition.lng = lngVal;
+      resetDistance();
       showLocation(currentPosition);
     }
   } else {
@@ -62,6 +75,10 @@ function showLocation(location) {
     zoom: 12
   });
   addMarker(location);
+  map.addListener('click', function(event) {
+    addMarker(event.latLng);
+    getLocationDetails([{'lng': event.latLng.lng(), 'lat': event.latLng.lat()}]);
+  });
 }
 
 function addMarker(pos) {
@@ -71,13 +88,16 @@ function addMarker(pos) {
   });
 }
 
-function getDistance(position){
-  distance.postMessage({currentPosition, 'location': position});
+function getDistance(position, reset=false){
+  distance.postMessage({currentPosition, 'location': position, 'reset': reset});
 }
 
 function showDistance(data){
-  let d = document.getElementById('distance');
-  d.textContent = `Distance between current and dropped location is ${data} km`;
+  console.log(data);
+  let list = document.querySelectorAll(`ul[pos="${data.id}"]`)[0];
+  let li = document.createElement('li');
+  li.innerHTML = `<b>Distance from Cur</b>: ${data.pos} km`;
+  list.appendChild(li);
 }
 
 function dropHandler(ev) {
@@ -114,8 +134,6 @@ function dropHandler(ev) {
               }
             });
             getLocationDetails(positions, false);
-            getDistance(positions[0]);
-            dropPositions.concat(positions);
           };
         })(file);
       reader.readAsText(file);
@@ -131,13 +149,13 @@ function getLocationDetails(positions, current) {
   positions.forEach(pos => {
     let xhr = new XMLHttpRequest();
     let requestString = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&zoom=18&addressdetails=1`;
-    xhr.onreadystatechange = function () { renderDetails(this, current) };
+    xhr.onreadystatechange = function () { renderDetails(this, current, pos) };
     xhr.open('GET', requestString, true);
     xhr.send();
   });
 }
 
-function renderDetails(xhr, current) {
+function renderDetails(xhr, current, pos) {
   if (xhr.readyState == 4) {
     if (xhr.status == 200) {
       let place = JSON.parse(xhr.responseText);
@@ -152,7 +170,8 @@ function renderDetails(xhr, current) {
         parent = document.getElementById('drop');
         if ( parent.childElementCount == 0) {
           let dropContainer = document.getElementById('dropPositions');
-          let header = document.getElementById('dropHeader');
+          let header = document.createElement('h3');
+          header.id = 'dropHeader';
           header.textContent = "Dropped Position(s)";
           dropContainer.appendChild(header);
         }
@@ -167,6 +186,11 @@ function renderDetails(xhr, current) {
         list.appendChild(li);
       });
       parent.appendChild(list);
+      if ( !current ) {
+        list.setAttribute('pos', `${dropPositions}`);
+        dropPositions++;
+        getDistance(pos);
+      }
     } else {
       error.textContent = "Error retrieving details";
     }
